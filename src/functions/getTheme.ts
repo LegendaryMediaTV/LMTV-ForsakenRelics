@@ -38,6 +38,30 @@ export const getTheme = createTheme({
         },
       },
     },
+
+    MuiDialog: {
+      defaultProps: {
+        slotProps: {
+          paper: {
+            sx: {
+              backgroundColor: blueGrey[800],
+            },
+          },
+        },
+      },
+    },
+
+    MuiDialogContent: {
+      styleOverrides: {
+        root: { padding: "0.75rem 0.75rem" },
+      },
+    },
+
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: { color: amber[500], padding: "0.75rem 0.75rem" },
+      },
+    },
   },
 
   typography: {

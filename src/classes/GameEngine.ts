@@ -65,7 +65,7 @@ export class GameEngine {
     this._enemyParty = updated;
 
     if (!hp) {
-      this.addLog(`The ${updated[index].name} has been defeated!`);
+      this.addLog(`The ${updated[index].name} has perished!`);
     }
 
     if (!updated.some((enemy) => enemy.stats.hp > 0)) {

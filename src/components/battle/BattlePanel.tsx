@@ -86,7 +86,7 @@ export const BattlePanel = () => {
           <Grid container spacing={1}>
             {heroParty.heroes.map((hero, index) => (
               <Grid size={6} key={index}>
-                <CreatureCard key={index} creature={hero} isHero />
+                <CreatureCard key={index} creature={hero} />
               </Grid>
             ))}
           </Grid>
@@ -106,7 +106,7 @@ export const BattlePanel = () => {
 
           {heroParty.heroes.length && (
             <Stack spacing={1}>
-              <CreatureCard creature={heroParty.heroes[activeHero]} isHero />
+              <CreatureCard creature={heroParty.heroes[activeHero]} />
 
               <ButtonGroup>
                 <Button
@@ -131,7 +131,7 @@ export const BattlePanel = () => {
 
           {!enemyParty.length && (
             <Typography variant="h5" color="text.secondary">
-              The enemy party has been defeated!
+              The enemy party has been vanquished!
             </Typography>
           )}
 

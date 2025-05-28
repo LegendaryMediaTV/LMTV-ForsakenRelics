@@ -21,4 +21,9 @@ export interface Enemy extends Creature {
    * Experience Points awarded for defeating the enemy.
    */
   xp: number;
+
+  /**
+   * A brief description of the enemy.
+   */
+  description: string;
 }
