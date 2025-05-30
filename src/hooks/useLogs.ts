@@ -2,7 +2,7 @@
 import { useSyncExternalStore } from "react";
 import { useEngine } from "./useEngine";
 
-/** Reactive log hook using useSyncExternalStore */
+/** Pub-sub for working with adventure logs from the game engine */
 export const useLogs = () => {
   const engine = useEngine();
 

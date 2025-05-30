@@ -5,16 +5,35 @@ import { Button, ButtonGroup, Grid, Stack, Typography } from "@mui/material";
 import { CreatureCard } from "../layout/CreatureCard";
 import { rollDice } from "@/functions/rollDice";
 import { selectRandomCreature } from "@/functions/battle/selectRandomCreature";
-import { useEffect, useState } from "react";
-import { useEnemyParty } from "@/hooks/useEnemyParty";
+import { useCallback, useEffect, useState } from "react";
 import { useEngine } from "@/hooks/useEngine";
-import { useHeroParty } from "@/hooks/useHeroParty";
+import { useGameOver } from "@/hooks/useGameOver";
+import { useInitiative } from "@/hooks/useInitiative";
 
 // Types
 import type { Enemy } from "@/types/Enemy";
-import type { Hero } from "@/types/Hero";
+import type { HeroParty } from "@/types/HeroParty";
 
-export const BattlePanel = () => {
+export const BattlePanel = ({
+  enemyParty,
+  heroParty,
+}: {
+  enemyParty: Enemy[];
+  heroParty: HeroParty;
+}) => {
+  /*********************
+   ***** Constants *****
+   ********************/
+
+  /** Game engine */
+  const engine = useEngine();
+
+  /** Game over */
+  const isGameOver = useGameOver();
+
+  /** Initiative bearer */
+  const initiativeBearer = useInitiative();
+
   /*****************
    ***** State *****
    ****************/
@@ -22,53 +41,109 @@ export const BattlePanel = () => {
   /** Active hero */
   const [activeHero, setActiveHero] = useState<number>(0);
 
-  /** Target enemy */
-  // const [targetEnemy, setTargetEnemy] = useState<number | null>(null);
+  /*******************
+   ***** Methods *****
+   ******************/
+
+  /** One creature attacks another */
+  const attackCreature = useCallback(
+    (
+      attackerType: "Hero" | "Enemy",
+      attackerIndex: number,
+      defenderType: "Hero" | "Enemy",
+      defenderIndex: number
+    ) => {
+      // Get the attacker creature
+      const attacker =
+        attackerType === "Hero"
+          ? heroParty.heroes[attackerIndex]
+          : enemyParty[attackerIndex];
+
+      // Get the defender creature
+      const defender =
+        defenderType === "Hero"
+          ? heroParty.heroes[defenderIndex]
+          : enemyParty[defenderIndex];
+
+      engine.addLog(`${attacker.name} attacks ${defender.name} …`);
+
+      // Attempt to hit the defender
+      const [didHit, hitRoll] = attemptHit(attacker, defender);
+      if (didHit) {
+        // Roll for damage
+        const damage = rollDice("1d6", { critical: hitRoll === 20 });
+        engine.addLog(
+          `${attacker.name} hits ${defender.name} with a roll of ${hitRoll} for ${damage} damage!`
+        );
+
+        // Apply damage to the defender
+        if (defenderType === "Hero") {
+          engine.damageHero(defenderIndex, damage);
+        } else {
+          engine.damageEnemy(defenderIndex!, damage);
+        }
+      }
+      // The attack missed
+      else {
+        engine.addLog(
+          `${attacker.name} misses ${defender.name} with a roll of ${hitRoll}.`
+        );
+      }
+    },
+    [enemyParty, engine, heroParty]
+  );
+
+  /** Enemy's turn, attack and advance the initiative */
+  const enemyTurn = useCallback(() => {
+    // Don't proceed if the game is over
+    if (isGameOver) return;
+
+    // Attack the active hero
+    // TODO: make this random instead of always attacking the active hero
+    attackCreature("Enemy", initiativeBearer.index, "Hero", activeHero);
+
+    // Proceed to the next initiative bearer
+    engine.advanceInitiative();
+  }, [attackCreature, initiativeBearer.index, activeHero, engine]);
+
+  /** Hero's turn, set the active hero */
+  const heroTurn = useCallback(() => {
+    setActiveHero(initiativeBearer.index);
+  }, [initiativeBearer.index]);
 
   /*****************
    ***** Hooks *****
    ****************/
 
-  /** Logger */
-  const engine = useEngine();
-  const heroParty = useHeroParty();
-  const enemyParty = useEnemyParty();
-
-  /** Component mounted */
+  /** Enemies should attack on their turn */
   useEffect(() => {
-    // Generate a random hero party
-    engine.generateHeroParty();
+    // If the initiative is empty, return
+    if (!initiativeBearer) return;
 
-    // Generate a random enemy party
-    engine.generateEnemyParty();
-  }, [engine]);
+    // Route the turn based on the initiative bearer type
+    if (initiativeBearer.type === "Hero") {
+      heroTurn();
+    }
+    // Enemy's turn, attack and proceed to the next initiative
+    else {
+      enemyTurn();
+    }
+  }, [initiativeBearer, enemyTurn, heroTurn]);
 
   /********************
    ***** Handlers *****
    *******************/
 
-  const handleAttack = (attacker: Hero | Enemy) => {
+  /** When the Attack button is clicked */
+  const handleAttack = () => {
+    // Randomly select a defender from the enemy party
     const defenderIndex = selectRandomCreature(enemyParty);
-    const defender = enemyParty[defenderIndex];
 
-    engine.addLog(`${attacker.name} attacks the ${defender.name} …`);
+    // Initiate the attack
+    attackCreature("Hero", activeHero, "Enemy", defenderIndex);
 
-    const [didHit, hitRoll] = attemptHit(attacker, defender);
-    if (didHit) {
-      const damage = rollDice("1d6", { critical: hitRoll === 20 });
-      engine.addLog(
-        `${attacker.name} hits the ${defender.name} with a roll of ${hitRoll} for ${damage} damage!`
-      );
-
-      engine.damageEnemy(defenderIndex!, damage);
-    } else {
-      engine.addLog(
-        `${attacker.name} misses the ${defender.name} with a roll of ${hitRoll}.`
-      );
-    }
-
-    // Set the next active hero
-    setActiveHero((prev) => (prev + 1) % heroParty.heroes.length);
+    // Proceed to the next initiative bearer
+    engine.advanceInitiative();
   };
 
   /******************
@@ -108,20 +183,15 @@ export const BattlePanel = () => {
             <Stack spacing={1}>
               <CreatureCard creature={heroParty.heroes[activeHero]} />
 
-              <ButtonGroup>
-                <Button
-                  onClick={handleAttack.bind(
-                    null,
-                    heroParty.heroes[activeHero]
-                  )}
-                >
-                  Attack
-                </Button>
-                <Button disabled>Spell</Button>
-                <Button disabled>Item</Button>
-                <Button disabled>Parry</Button>
-                <Button disabled>Flee</Button>
-              </ButtonGroup>
+              {!isGameOver && (
+                <ButtonGroup>
+                  <Button onClick={handleAttack}>Attack</Button>
+                  <Button disabled>Spell</Button>
+                  <Button disabled>Item</Button>
+                  <Button disabled>Parry</Button>
+                  <Button disabled>Flee</Button>
+                </ButtonGroup>
+              )}
             </Stack>
           )}
         </Grid>

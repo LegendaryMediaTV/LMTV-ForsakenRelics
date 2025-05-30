@@ -30,7 +30,7 @@ export const getTheme = createTheme({
 
     MuiCssBaseline: {
       styleOverrides: {
-        body: { lineHeight: 1 },
+        body: { lineHeight: 1.25 },
         "h1, h2, h3, h4, h5, h6": {
           lineHeight: 1,
           margin: 0,
@@ -69,10 +69,11 @@ export const getTheme = createTheme({
 
     h1: {
       fontFamily: '"Lavishly Yours", cursive',
+      fontSize: "4.17rem",
       color: red[900],
       lineHeight: 0.75,
       textAlign: "center",
-      WebkitTextStroke: `0.45px ${amber[500]}`,
+      WebkitTextStroke: `0.25px ${amber[500]}`,
     },
 
     h2: {

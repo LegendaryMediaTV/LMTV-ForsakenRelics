@@ -86,7 +86,12 @@ export const CreatureCard = ({ creature }: { creature: Enemy | Hero }) => {
         </Grid>
       </Stack>
 
-      <Dialog onClose={toggleModal} open={showModal}>
+      <Dialog
+        fullWidth={true}
+        maxWidth="md"
+        onClose={toggleModal}
+        open={showModal}
+      >
         <DialogTitle>
           {(creature as Hero).nameFull ?? creature.name}
         </DialogTitle>
@@ -104,52 +109,52 @@ export const CreatureCard = ({ creature }: { creature: Enemy | Hero }) => {
             <Grid size={6}>
               <Typography variant="h5">Stats</Typography>
 
-              <Grid container spacing={0.5} sx={{ color: grey[400] }}>
+              <Grid container spacing={0.25} sx={{ color: grey[400] }}>
                 {isHero ? (
                   <>
-                    <Grid size={{ xs: 6 }}>Race:</Grid>
-                    <Grid size={{ xs: 6 }}>{(creature as Hero).race}</Grid>
+                    <Grid size={{ xs: 4 }}>Race:</Grid>
+                    <Grid size={{ xs: 8 }}>{(creature as Hero).race}</Grid>
 
-                    <Grid size={{ xs: 6 }}>Gender:</Grid>
-                    <Grid size={{ xs: 6 }}>{(creature as Hero).gender}</Grid>
+                    <Grid size={{ xs: 4 }}>Gender:</Grid>
+                    <Grid size={{ xs: 8 }}>{(creature as Hero).gender}</Grid>
 
-                    <Grid size={{ xs: 6 }}>Class:</Grid>
-                    <Grid size={{ xs: 6 }}>{(creature as Hero).class}</Grid>
+                    <Grid size={{ xs: 4 }}>Class:</Grid>
+                    <Grid size={{ xs: 8 }}>{(creature as Hero).class}</Grid>
                   </>
                 ) : (
                   <>
-                    <Grid size={{ xs: 6 }}>Alignment:</Grid>
-                    <Grid size={{ xs: 6 }}>
+                    <Grid size={{ xs: 4 }}>Alignment:</Grid>
+                    <Grid size={{ xs: 8 }}>
                       {(creature as Enemy).alignment}
                     </Grid>
                   </>
                 )}
 
-                <Grid size={{ xs: 6 }}>Level:</Grid>
-                <Grid size={{ xs: 6 }}>{creature.stats.level}</Grid>
+                <Grid size={{ xs: 4 }}>Level:</Grid>
+                <Grid size={{ xs: 8 }}>{creature.stats.level}</Grid>
 
-                <Grid size={{ xs: 6 }}>HP:</Grid>
-                <Grid size={{ xs: 6 }}>
+                <Grid size={{ xs: 4 }}>HP:</Grid>
+                <Grid size={{ xs: 8 }}>
                   {creature.stats.hp} / {creature.stats.hpMax}
                 </Grid>
 
-                <Grid size={{ xs: 6 }}>Offense:</Grid>
-                <Grid size={{ xs: 6 }}>{creature.stats.offense}</Grid>
+                <Grid size={{ xs: 4 }}>Offense:</Grid>
+                <Grid size={{ xs: 8 }}>{creature.stats.offense}</Grid>
 
-                <Grid size={{ xs: 6 }}>Defense:</Grid>
-                <Grid size={{ xs: 6 }}>{creature.stats.defense}</Grid>
+                <Grid size={{ xs: 4 }}>Defense:</Grid>
+                <Grid size={{ xs: 8 }}>{creature.stats.defense}</Grid>
 
                 {isHero ? (
                   <>
-                    <Grid size={{ xs: 6 }}>Unarmed:</Grid>
-                    <Grid size={{ xs: 6 }}>
+                    <Grid size={{ xs: 4 }}>Unarmed:</Grid>
+                    <Grid size={{ xs: 8 }}>
                       {(creature as Hero).stats.unarmed}
                     </Grid>
                   </>
                 ) : (
                   <>
-                    <Grid size={{ xs: 6 }}>XP:</Grid>
-                    <Grid size={{ xs: 6 }}>{(creature as Enemy).xp}</Grid>
+                    <Grid size={{ xs: 4 }}>XP:</Grid>
+                    <Grid size={{ xs: 8 }}>{(creature as Enemy).xp}</Grid>
                   </>
                 )}
               </Grid>

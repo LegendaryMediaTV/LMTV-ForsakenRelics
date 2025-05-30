@@ -2,6 +2,7 @@
 import { useContext } from "react";
 import { EngineContext } from "@/contexts/EngineContext";
 
+/** Access the game engine instance from the context. */
 export const useEngine = () => {
   const engine = useContext(EngineContext);
 

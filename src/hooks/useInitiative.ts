@@ -2,12 +2,12 @@
 import { useSyncExternalStore } from "react";
 import { useEngine } from "./useEngine";
 
-/** Pub-sub for working with the hero party from the game engine */
-export const useHeroParty = () => {
+/** Pub-sub for working with initiative from the game engine */
+export const useInitiative = () => {
   const engine = useEngine();
 
   return useSyncExternalStore(
-    engine.onHeroPartyChange,
-    engine.getHeroPartySnapshot
+    engine.onInitiativeChange,
+    engine.getInitiativeSnapshot
   );
 };
