@@ -3,16 +3,16 @@
  *
  * @param diceNotation - The D&D-style dice notation (e.g., "3d6+2d4+3" or "d20") or a straight number.
  * @param options - Optional configuration for dice rolling.
- * @param options.critical - If true, the result will be the maximum possible value of the dice rolls.
+ * @param options.isCritical - If true, the result will be the maximum possible value of the dice rolls.
  * @param options.min - The minimum value the result can be, if specified.
  * @param options.max - The maximum value the result can be, if specified.
  * @returns The total result of the dice rolls and adjustments, with constraints applied.
  */
 export const rollDice = (
   diceNotation: string | number,
-  options: { critical?: boolean; min?: number; max?: number } = {}
+  options: { isCritical?: boolean; min?: number; max?: number } = {}
 ): number => {
-  const { critical, min, max } = options;
+  const { isCritical, min, max } = options;
 
   // If it's a number, just return the number as the result
   if (typeof diceNotation === "number") {
@@ -43,7 +43,7 @@ export const rollDice = (
 
       // Roll the dice
       for (let i = 0; i < (numDice || 1); i++) {
-        const roll = critical
+        const roll = isCritical
           ? numSides
           : Math.floor(Math.random() * numSides) + 1;
         total += roll;

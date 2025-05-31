@@ -70,10 +70,15 @@ export const BattlePanel = ({
       // Attempt to hit the defender
       const [didHit, hitRoll] = attemptHit(attacker, defender);
       if (didHit) {
+        // Determine if it is a critical hit
+        const isCritical = hitRoll === 20;
+
         // Roll for damage
-        const damage = rollDice("1d6", { critical: hitRoll === 20 });
+        const damage = rollDice("1d6", { isCritical });
         engine.addLog(
-          `${attacker.name} hits ${defender.name} with a roll of ${hitRoll} for ${damage} damage!`
+          `${attacker.name} hits ${defender.name} with a roll of ${hitRoll}` +
+            (isCritical ? "—a critical hit—" : " ") +
+            `doing ${damage} damage!`
         );
 
         // Apply damage to the defender
@@ -104,7 +109,7 @@ export const BattlePanel = ({
 
     // Proceed to the next initiative bearer
     engine.advanceInitiative();
-  }, [attackCreature, initiativeBearer.index, activeHero, engine]);
+  }, [attackCreature, initiativeBearer.index, activeHero, engine, isGameOver]);
 
   /** Hero's turn, set the active hero */
   const heroTurn = useCallback(() => {

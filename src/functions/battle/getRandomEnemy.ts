@@ -27,10 +27,11 @@ const enemiesByLevel: Record<number, Enemy[]> = {
  * @returns The corresponding enemy frequency.
  */
 const getFrequencyFromRoll = (roll: number): Frequency => {
-  if ([2, 3, 19, 20].includes(roll)) return "Very Rare";
-  if ([4, 5, 17, 18].includes(roll)) return "Rare";
-  if ([6, 7, 15, 16].includes(roll)) return "Uncommon";
-  return "Common"; // 8-14
+  if ([2, 20].includes(roll)) return "Uber";
+  if ([3, 4, 18, 19].includes(roll)) return "Very Rare";
+  if ([5, 6, 16, 17].includes(roll)) return "Rare";
+  if ([7, 8, 14, 15].includes(roll)) return "Uncommon";
+  return "Common"; // 9-13
 };
 
 /**

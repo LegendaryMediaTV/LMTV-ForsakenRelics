@@ -18,7 +18,7 @@ export const attemptHit = (
   modifier: number = 0
 ): [boolean, number] => {
   // Calculate the "to hit" number
-  const toHit = attacker.stats.offense + defender.stats.defense + modifier;
+  const toHit = 11 - attacker.stats.offense + defender.stats.defense + modifier;
 
   // Do the attack roll
   const roll = rollDice("d20", { max: 20 });
