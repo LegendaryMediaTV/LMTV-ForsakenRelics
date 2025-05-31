@@ -1,7 +1,9 @@
 // Dependencies
 import _ from "lodash";
+import { EXPERIENCE_LEVELS } from "@/constants/ExperienceLevels";
 import { getRandomEnemy } from "@/functions/battle/getRandomEnemy";
 import { getRandomHero } from "@/functions/newHero/getRandomHero";
+import { levelUp } from "@/functions/levelUp";
 import { rollDice } from "@/functions/rollDice";
 
 // Types
@@ -81,6 +83,8 @@ export class GameEngine {
       this.addXP(
         this._enemyParty.reduce((total, enemy) => total + enemy.xp, 0)
       );
+
+      this.restHeroes();
 
       this.generateEnemyParty();
     }
@@ -194,6 +198,74 @@ export class GameEngine {
     this.addLog(
       `The hero party gained ${amount} XP, for a total of ${this._heroParty.xp} XP!`
     );
+
+    // Check if any heroes can level up
+    for (let index = 0; index < this._heroParty.heroes.length; index++) {
+      const hero = this._heroParty.heroes[index];
+
+      // Check if the hero can level up
+      while (
+        hero.stats.level < EXPERIENCE_LEVELS.length - 1 &&
+        this._heroParty.xp >= EXPERIENCE_LEVELS[hero.stats.level]
+      ) {
+        // Level up the hero
+        levelUp(hero);
+
+        this.addLog(
+          `${hero.nameFull} has leveled up to level ${hero.stats.level}!`
+        );
+      }
+    }
+  };
+
+  /** Rest all the hero party */
+  restHeroes = () => {
+    for (let index = 0; index < this._heroParty.heroes.length; index++) {
+      // Attempt revival
+      if (!this._heroParty.heroes[index].stats.hp) {
+        // Roll a 1d20 to see if the hero can be revived
+        const roll = rollDice("1d20");
+
+        // If the roll is 15 or higher, revive the hero with 1 HP
+        if (roll >= 15) {
+          this._heroParty.heroes[index].stats.hp = Math.ceil(
+            this._heroParty.heroes[index].stats.hpMax / 4
+          );
+          this.addLog(
+            `With a roll of ${roll}, ${this._heroParty.heroes[index].nameFull} has been revived with partial HP!`
+          );
+        } else {
+          this.addLog(
+            `With a roll of ${roll}, ${this._heroParty.heroes[index].nameFull} could not be revived yet.`
+          );
+        }
+      }
+      // Rest and recover as needed
+      else if (
+        this._heroParty.heroes[index].stats.hp &&
+        this._heroParty.heroes[index].stats.hp <
+          this._heroParty.heroes[index].stats.hpMax
+      ) {
+        // Recover up to 25% of max HP
+        this._heroParty.heroes[index].stats.hp = Math.min(
+          this._heroParty.heroes[index].stats.hpMax,
+          this._heroParty.heroes[index].stats.hp +
+            Math.ceil(this._heroParty.heroes[index].stats.hpMax / 4)
+        );
+
+        this.addLog(
+          `${this._heroParty.heroes[index].nameFull} rests and recovers ` +
+            (this._heroParty.heroes[index].stats.hp ===
+            this._heroParty.heroes[index].stats.hpMax
+              ? "full"
+              : "some") +
+            " HP."
+        );
+      }
+    }
+
+    // Notify subscribers
+    this._notifyHeroPartySubscribers();
   };
 
   /**********************
