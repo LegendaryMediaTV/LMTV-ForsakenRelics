@@ -11,14 +11,15 @@ import { useGameOver } from "@/hooks/useGameOver";
 import { useInitiative } from "@/hooks/useInitiative";
 
 // Types
-import type { Enemy } from "@/types/Enemy";
+import type { Attack, AttackEffect } from "@/types/Attack";
+import type { EnemyParty } from "@/types/EnemyParty";
 import type { HeroParty } from "@/types/HeroParty";
 
 export const BattlePanel = ({
   enemyParty,
   heroParty,
 }: {
-  enemyParty: Enemy[];
+  enemyParty: EnemyParty;
   heroParty: HeroParty;
 }) => {
   /*********************
@@ -57,15 +58,30 @@ export const BattlePanel = ({
       const attacker =
         attackerType === "Hero"
           ? heroParty.heroes[attackerIndex]
-          : enemyParty[attackerIndex];
+          : enemyParty.enemies[attackerIndex];
 
       // Get the defender creature
       const defender =
         defenderType === "Hero"
           ? heroParty.heroes[defenderIndex]
-          : enemyParty[defenderIndex];
+          : enemyParty.enemies[defenderIndex];
 
-      engine.addLog(`${attacker.name} attacks ${defender.name} …`);
+      // Determine the attack type
+      let attack: Attack;
+      if ("secondary" in attacker) {
+        const attackTypeRoll = rollDice("1d6");
+
+        attack = attackTypeRoll >= 5 ? attacker.secondary : attacker.primary;
+      } else {
+        attack = {
+          name: "Weapon",
+          damage: "1d6",
+        };
+      }
+
+      engine.addLog(
+        `${attacker.name} attacks ${defender.name} with ${attack.name} …`
+      );
 
       // Attempt to hit the defender
       const [didHit, hitRoll] = attemptHit(attacker, defender);
@@ -73,26 +89,51 @@ export const BattlePanel = ({
         // Determine if it is a critical hit
         const isCritical = hitRoll === 20;
 
-        // Roll for damage
-        const damage = rollDice("1d6", { isCritical });
-        engine.addLog(
-          `${attacker.name} hits ${defender.name} with a roll of ${hitRoll}` +
-            (isCritical ? "—a critical hit—" : " ") +
-            `doing ${damage} damage!`
-        );
+        let hitLog = `${attacker.name} hits with a roll of ${hitRoll}`;
+        if (isCritical) {
+          hitLog += "—critical hit";
+        }
+
+        // Roll for damage, when applicable
+        let damage = 0;
+        if (attack.damage) {
+          damage = rollDice(attack.damage, { isCritical });
+          hitLog += (isCritical ? "—" : ", ") + `inflicting ${damage} damage`;
+        }
+        hitLog += "!";
+
+        // Determine the attack effect, when applicable
+        let effect: AttackEffect | undefined;
+        if (isCritical && attack.criticalEffect) {
+          effect = attack.criticalEffect;
+        } else if (attack.effect) {
+          effect = attack.effect;
+        }
+
+        engine.addLog(hitLog);
 
         // Apply damage to the defender
         if (defenderType === "Hero") {
-          engine.damageHero(defenderIndex, damage);
+          if (damage) {
+            engine.damageHero(defenderIndex, damage);
+          }
+
+          if (effect) {
+            engine.affectHero(defenderIndex, effect);
+          }
         } else {
-          engine.damageEnemy(defenderIndex!, damage);
+          if (damage) {
+            engine.damageEnemy(defenderIndex!, damage);
+          }
+
+          if (effect) {
+            engine.affectEnemy(defenderIndex, effect);
+          }
         }
       }
       // The attack missed
       else {
-        engine.addLog(
-          `${attacker.name} misses ${defender.name} with a roll of ${hitRoll}.`
-        );
+        engine.addLog(`${attacker.name} misses with a roll of ${hitRoll}.`);
       }
     },
     [enemyParty, engine, heroParty]
@@ -103,13 +144,21 @@ export const BattlePanel = ({
     // Don't proceed if the game is over
     if (isGameOver) return;
 
+    // Randomly select a defender from the hero party
+    const defenderIndex = selectRandomCreature(heroParty.heroes);
+
     // Attack the active hero
-    // TODO: make this random instead of always attacking the active hero
-    attackCreature("Enemy", initiativeBearer.index, "Hero", activeHero);
+    attackCreature("Enemy", initiativeBearer.index, "Hero", defenderIndex);
 
     // Proceed to the next initiative bearer
     engine.advanceInitiative();
-  }, [attackCreature, initiativeBearer.index, activeHero, engine, isGameOver]);
+  }, [
+    attackCreature,
+    heroParty.heroes,
+    initiativeBearer.index,
+    engine,
+    isGameOver,
+  ]);
 
   /** Hero's turn, set the active hero */
   const heroTurn = useCallback(() => {
@@ -142,10 +191,19 @@ export const BattlePanel = ({
   /** When the Attack button is clicked */
   const handleAttack = () => {
     // Randomly select a defender from the enemy party
-    const defenderIndex = selectRandomCreature(enemyParty);
+    const defenderIndex = selectRandomCreature(enemyParty.enemies);
 
     // Initiate the attack
     attackCreature("Hero", activeHero, "Enemy", defenderIndex);
+
+    // Proceed to the next initiative bearer
+    engine.advanceInitiative();
+  };
+
+  /** When the Recover button is clicked */
+  const handleRecover = () => {
+    // Attempt to recover the active hero
+    engine.recoverHero(activeHero);
 
     // Proceed to the next initiative bearer
     engine.advanceInitiative();
@@ -190,11 +248,19 @@ export const BattlePanel = ({
 
               {!isGameOver && (
                 <ButtonGroup>
-                  <Button onClick={handleAttack}>Attack</Button>
-                  <Button disabled>Spell</Button>
-                  <Button disabled>Item</Button>
-                  <Button disabled>Parry</Button>
-                  <Button disabled>Flee</Button>
+                  {heroParty.heroes[activeHero].effects &&
+                  (heroParty.heroes[activeHero].effects.includes("Stun") ||
+                    heroParty.heroes[activeHero].effects.includes("KO")) ? (
+                    <Button onClick={handleRecover}>Recover</Button>
+                  ) : (
+                    <>
+                      <Button onClick={handleAttack}>Attack</Button>
+                      <Button disabled>Spell</Button>
+                      <Button disabled>Item</Button>
+                      <Button disabled>Parry</Button>
+                      <Button disabled>Flee</Button>
+                    </>
+                  )}
                 </ButtonGroup>
               )}
             </Stack>
@@ -204,15 +270,15 @@ export const BattlePanel = ({
         <Grid size={6}>
           <Typography variant="h4">Enemy Party</Typography>
 
-          {!enemyParty.length && (
+          {!enemyParty.enemies.length && (
             <Typography variant="h5" color="text.secondary">
               The enemy party has been vanquished!
             </Typography>
           )}
 
-          {enemyParty.length && (
+          {enemyParty.enemies.length && (
             <Grid container spacing={1}>
-              {enemyParty.map((enemy, index) => (
+              {enemyParty.enemies.map((enemy, index) => (
                 <Grid size={4} key={index}>
                   <CreatureCard creature={enemy} />
                 </Grid>

@@ -42,7 +42,7 @@ export const setName = (hero: Hero): void => {
     "Skylara",
     "Elysia",
     "Roswyn",
-    "Sorcha",
+    "Sorsha",
   ];
 
   // Split titles by gender

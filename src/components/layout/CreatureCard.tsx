@@ -1,5 +1,5 @@
 // Dependencies
-import { amber, blueGrey, grey, red } from "@mui/material/colors";
+import { amber, blueGrey, grey, purple, red } from "@mui/material/colors";
 import {
   Box,
   Button,
@@ -40,7 +40,14 @@ export const CreatureCard = ({ creature }: { creature: Enemy | Hero }) => {
     <>
       <Stack
         spacing={0.25}
-        sx={{ opacity: status === "dead" ? 0.35 : undefined }}
+        sx={{
+          opacity:
+            status === "dead"
+              ? 0.35
+              : creature.effects?.length
+              ? 0.6
+              : undefined,
+        }}
       >
         <Button variant="text" onClick={toggleModal} sx={{ padding: 0 }}>
           <Box
@@ -59,6 +66,8 @@ export const CreatureCard = ({ creature }: { creature: Enemy | Hero }) => {
                   ? red[500]
                   : status === "critical"
                   ? amber[900]
+                  : creature.effects?.length
+                  ? purple[500]
                   : blueGrey[600]
               }`,
               borderRadius: 1,
@@ -67,7 +76,28 @@ export const CreatureCard = ({ creature }: { creature: Enemy | Hero }) => {
           />
         </Button>
 
-        <Typography variant="h5">{creature.name}</Typography>
+        <Typography variant="h5">
+          {creature.name}
+          {!!creature.effects?.length && (
+            <>
+              {" "}
+              (
+              {creature.effects
+                .map((effect) => {
+                  switch (effect) {
+                    case "Stun":
+                      return "Stn";
+                    case "Inhibit":
+                      return "Inh";
+                    default:
+                      return effect;
+                  }
+                })
+                .join(", ")}
+              )
+            </>
+          )}
+        </Typography>
 
         <Grid
           container

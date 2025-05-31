@@ -43,7 +43,7 @@ export const App = (): React.ReactElement => {
     <Container component="main" sx={{ p: 2 }}>
       <MainTitle />
 
-      {heroParty.heroes.length && enemyParty.length && (
+      {heroParty.heroes.length && enemyParty.enemies.length && (
         <BattlePanel enemyParty={enemyParty} heroParty={heroParty} />
       )}
 

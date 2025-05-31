@@ -16,7 +16,7 @@ export const readPartyFile = async () => {
   try {
     const data = await fs.readFile(filePath, "utf-8");
     return JSON.parse(data);
-  } catch (_error) {
+  } catch {
     throw new Error("Error reading party data file.");
   }
 };
@@ -30,7 +30,7 @@ export const readPartyFile = async () => {
 export const writePartyFile = async (data: object) => {
   try {
     await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
-  } catch (_error) {
+  } catch {
     throw new Error("Error writing party data file.");
   }
 };

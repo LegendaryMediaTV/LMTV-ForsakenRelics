@@ -24,7 +24,7 @@ export const addRandomHero = async (): Promise<void> => {
 
     // Write the updated party back to the file
     await writePartyFile(party);
-  } catch (_error) {
+  } catch {
     throw new Error("Error adding a random hero to the party.");
   }
 };

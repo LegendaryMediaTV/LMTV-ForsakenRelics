@@ -43,7 +43,7 @@ export const updateHeroByIndex = async (
     }
 
     await writePartyFile(party);
-  } catch (_error) {
+  } catch {
     throw new Error("Error updating hero data.");
   }
 };

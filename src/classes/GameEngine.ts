@@ -7,19 +7,86 @@ import { levelUp } from "@/functions/levelUp";
 import { rollDice } from "@/functions/rollDice";
 
 // Types
+import type { AttackEffect } from "@/types/Attack";
 import type { Creature } from "@/types/Creature";
-import type { Enemy } from "@/types/Enemy";
+import type { EnemyParty } from "@/types/EnemyParty";
 import type { HeroParty } from "@/types/HeroParty";
 import type { InitiativeBearer } from "@/types/InitiativeBearer";
 import type { Log } from "@/types/Log";
 
 // Basic Engine Class
 export class GameEngine {
+  /********************
+   ***** Creature *****
+   *******************/
+
+  private _affectCreature = (creature: Creature, effect: AttackEffect) => {
+    if (!creature.effects) {
+      creature.effects = [];
+    }
+
+    // Only add the effect if it doesn't already exist
+    if (!creature.effects.includes(effect)) {
+      creature.effects.push(effect);
+    }
+
+    let effectName: string;
+    switch (effect) {
+      case "Stun":
+        effectName = "stunned";
+        break;
+
+      case "KO":
+        effectName = "knocked out";
+        break;
+
+      case "Inhibit":
+        effectName = "inhibited";
+        break;
+
+      default:
+        effectName = `affected by ${effect}`;
+        break;
+    }
+
+    this.addLog(`${creature.name} is ${effectName}!`);
+  };
+
+  private _recoverCreature = (creature: Creature) => {
+    if (!creature.effects?.length) {
+      return;
+    }
+
+    // Remove the stun effect if, it exists
+    if (creature.effects.includes("Stun")) {
+      creature.effects = creature.effects.filter((effect) => effect !== "Stun");
+
+      this.addLog(`${creature.name} is no longer stunned!`);
+    }
+
+    // Remove the KO effect if it exists
+    if (creature.effects.includes("KO")) {
+      const roll = rollDice("1d20");
+
+      let recoveryMessage = `With a roll of ${roll}, ${creature.name} `;
+
+      if (roll >= 13) {
+        creature.effects = creature.effects.filter((effect) => effect !== "KO");
+
+        recoveryMessage += "is no longer KOed.";
+      } else {
+        recoveryMessage += "is still KOed.";
+      }
+
+      this.addLog(recoveryMessage);
+    }
+  };
+
   /***********************
    ***** Enemy Party *****
    **********************/
 
-  private _enemyParty: Enemy[] = [];
+  private _enemyParty: EnemyParty = { enemies: [] };
 
   private _enemyPartyInitialized = false;
 
@@ -35,7 +102,7 @@ export class GameEngine {
     return () => this._enemyPartySubscribers.delete(callback);
   };
 
-  getEnemyPartySnapshot = (): Enemy[] => {
+  getEnemyPartySnapshot = (): EnemyParty => {
     return this._enemyParty;
   };
 
@@ -44,9 +111,11 @@ export class GameEngine {
     if (!this._enemyPartyInitialized) {
       this._enemyPartyInitialized = true;
 
-      this._enemyParty = Array.from({ length: rollDice("1d4") }, () =>
-        getRandomEnemy(1)
-      );
+      this._enemyParty = {
+        enemies: Array.from({ length: rollDice("1d4") }, () =>
+          getRandomEnemy(1)
+        ),
+      };
 
       this._notifyEnemyPartySubscribers();
 
@@ -60,34 +129,56 @@ export class GameEngine {
   damageEnemy = (index: number, amount: number) => {
     const updated = _.cloneDeep(this._enemyParty);
 
-    const hp = Math.max(0, updated[index].stats.hp - amount);
+    const hp = Math.max(0, updated.enemies[index].stats.hp - amount);
 
-    updated[index] = {
-      ...updated[index],
+    updated.enemies[index] = {
+      ...updated.enemies[index],
       stats: {
-        ...updated[index].stats,
+        ...updated.enemies[index].stats,
         hp,
       },
     };
 
     this._enemyParty = updated;
 
+    this._notifyEnemyPartySubscribers();
+
     if (!hp) {
-      this.addLog(`${updated[index].name} has perished!`);
+      this.addLog(`${updated.enemies[index].name} has perished!`);
     }
 
-    if (!updated.some((enemy) => enemy.stats.hp > 0)) {
+    if (!updated.enemies.some((enemy) => enemy.stats.hp > 0)) {
       this.addLog("The enemy party has been vanquished!");
       this._enemyPartyInitialized = false;
 
       this.addXP(
-        this._enemyParty.reduce((total, enemy) => total + enemy.xp, 0)
+        this._enemyParty.enemies.reduce((total, enemy) => total + enemy.xp, 0)
       );
 
       this.restHeroes();
 
       this.generateEnemyParty();
     }
+  };
+
+  /** Apply an effect to the corresponding enemy party member */
+  affectEnemy = (index: number, effect: AttackEffect) => {
+    const enemy = this._enemyParty.enemies[index];
+
+    this._affectCreature(enemy, effect);
+
+    this._notifyEnemyPartySubscribers();
+  };
+
+  /** Attempt to recover an enemy */
+  recoverEnemy = (index: number) => {
+    const updated = _.cloneDeep(this._enemyParty);
+
+    const enemy = updated.enemies[index];
+
+    this._recoverCreature(enemy);
+
+    this._enemyParty = updated;
 
     this._notifyEnemyPartySubscribers();
   };
@@ -154,7 +245,11 @@ export class GameEngine {
     if (!this._heroPartyInitialized) {
       this._heroPartyInitialized = true;
 
-      this._heroParty.heroes = Array.from({ length: 4 }, () => getRandomHero());
+      this._heroParty = {
+        heroes: Array.from({ length: 4 }, () => getRandomHero()),
+        inventory: [],
+        xp: 0,
+      };
 
       this._notifyHeroPartySubscribers();
 
@@ -185,6 +280,28 @@ export class GameEngine {
     if (!updated.heroes.some((hero) => hero.stats.hp > 0)) {
       this._gameOver();
     }
+
+    this._notifyHeroPartySubscribers();
+  };
+
+  /** Apply an effect to the corresponding hero party member */
+  affectHero = (index: number, effect: AttackEffect) => {
+    const hero = this._heroParty.heroes[index];
+
+    this._affectCreature(hero, effect);
+
+    this._notifyHeroPartySubscribers();
+  };
+
+  /** Attempt to recover a hero */
+  recoverHero = (index: number) => {
+    const updated = _.cloneDeep(this._heroParty);
+
+    const hero = updated.heroes[index];
+
+    this._recoverCreature(hero);
+
+    this._heroParty = updated;
 
     this._notifyHeroPartySubscribers();
   };
@@ -221,47 +338,42 @@ export class GameEngine {
   /** Rest all the hero party */
   restHeroes = () => {
     for (let index = 0; index < this._heroParty.heroes.length; index++) {
+      const hero = this._heroParty.heroes[index];
+
       // Attempt revival
-      if (!this._heroParty.heroes[index].stats.hp) {
+      if (!hero.stats.hp) {
         // Roll a 1d20 to see if the hero can be revived
         const roll = rollDice("1d20");
 
         // If the roll is 15 or higher, revive the hero with 1 HP
         if (roll >= 15) {
-          this._heroParty.heroes[index].stats.hp = Math.ceil(
-            this._heroParty.heroes[index].stats.hpMax / 4
-          );
+          hero.stats.hp = Math.ceil(hero.stats.hpMax / 4);
           this.addLog(
-            `With a roll of ${roll}, ${this._heroParty.heroes[index].nameFull} has been revived with partial HP!`
+            `With a roll of ${roll}, ${hero.name} has been revived with partial HP!`
           );
         } else {
           this.addLog(
-            `With a roll of ${roll}, ${this._heroParty.heroes[index].nameFull} could not be revived yet.`
+            `With a roll of ${roll}, ${hero.name} could not be revived yet.`
           );
         }
       }
       // Rest and recover as needed
-      else if (
-        this._heroParty.heroes[index].stats.hp &&
-        this._heroParty.heroes[index].stats.hp <
-          this._heroParty.heroes[index].stats.hpMax
-      ) {
+      else if (hero.stats.hp && hero.stats.hp < hero.stats.hpMax) {
         // Recover up to 25% of max HP
-        this._heroParty.heroes[index].stats.hp = Math.min(
-          this._heroParty.heroes[index].stats.hpMax,
-          this._heroParty.heroes[index].stats.hp +
-            Math.ceil(this._heroParty.heroes[index].stats.hpMax / 4)
+        hero.stats.hp = Math.min(
+          hero.stats.hpMax,
+          hero.stats.hp + Math.ceil(hero.stats.hpMax / 4)
         );
 
         this.addLog(
-          `${this._heroParty.heroes[index].nameFull} rests and recovers ` +
-            (this._heroParty.heroes[index].stats.hp ===
-            this._heroParty.heroes[index].stats.hpMax
-              ? "full"
-              : "some") +
+          `${hero.name} rests and recovers ` +
+            (hero.stats.hp === hero.stats.hpMax ? "full" : "some") +
             " HP."
         );
       }
+
+      // Reset effects
+      hero.effects = hero.effects = [];
     }
 
     // Notify subscribers
@@ -304,7 +416,7 @@ export class GameEngine {
     });
 
     // Add enemies to the initiative
-    Array.from({ length: this._enemyParty.length }, (_, index) => {
+    Array.from({ length: this._enemyParty.enemies.length }, (_, index) => {
       this._initiativeOrder.push({
         type: "Enemy",
         index,
@@ -339,7 +451,7 @@ export class GameEngine {
           ? this._heroParty.heroes[
               this._initiativeOrder[this._initiativeIndex].index
             ]
-          : this._enemyParty[
+          : this._enemyParty.enemies[
               this._initiativeOrder[this._initiativeIndex].index
             ];
     } while (!initiativeCreature.stats.hp);

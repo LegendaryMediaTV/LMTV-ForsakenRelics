@@ -1,3 +1,6 @@
+// Types
+import type { AttackEffect } from "@/types/Attack";
+
 /**
  * Creature data used for both heroes and enemies in battle.
  */
@@ -41,4 +44,6 @@ export interface Creature {
      */
     defense: number;
   };
+
+  effects?: AttackEffect[];
 }
