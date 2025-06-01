@@ -161,7 +161,7 @@ export const ENEMIES_01: Enemy[] = [
     xp: 35,
     description:
       "Massive and merciless, no howl is feared more than that of the Dire Wolf. Farmers say it’s not the size that kills, but the cold intelligence behind those eyes. These wolves stalk the edges of the forest, silent and patient, waiting for the moment when a lone traveler dares to stray too far from the safety of the village lights.",
-    primary: { name: "Maul", damage: "1d6-1" },
+    primary: { name: "Thrash", damage: "1d6-1" },
     secondary: { name: "Latch On", damage: "1d4-1", effect: "Inhibit" },
   },
   {

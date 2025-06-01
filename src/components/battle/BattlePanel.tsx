@@ -74,8 +74,14 @@ export const BattlePanel = ({
         attack = attackTypeRoll >= 5 ? attacker.secondary : attacker.primary;
       } else {
         attack = {
-          name: "Weapon",
-          damage: "1d6",
+          name: "Grapple",
+          damage: attacker.stats.unarmed,
+          criticalEffect:
+            attacker.class === "Fighter"
+              ? "KO"
+              : attacker.class === "Crusader"
+              ? "Stun"
+              : undefined,
         };
       }
 
@@ -83,8 +89,21 @@ export const BattlePanel = ({
         `${attacker.name} attacks ${defender.name} with ${attack.name} …`
       );
 
+      // Determine the modifier, based on status effects
+      let modifier = 0;
+      if (attacker.effects?.includes("Inhibit")) {
+        modifier += 2;
+      }
+      if (defender.effects?.includes("KO")) {
+        modifier -= 4;
+      } else if (defender.effects?.includes("Inhibit")) {
+        modifier -= 2;
+      } else if (defender.effects?.includes("Stun")) {
+        modifier -= 1;
+      }
+
       // Attempt to hit the defender
-      const [didHit, hitRoll] = attemptHit(attacker, defender);
+      const [didHit, hitRoll] = attemptHit(attacker, defender, modifier);
       if (didHit) {
         // Determine if it is a critical hit
         const isCritical = hitRoll === 20;
@@ -97,10 +116,10 @@ export const BattlePanel = ({
         // Roll for damage, when applicable
         let damage = 0;
         if (attack.damage) {
-          damage = rollDice(attack.damage, { isCritical });
+          damage = rollDice(attack.damage, { isCritical, min: 1 });
           hitLog += (isCritical ? "—" : ", ") + `inflicting ${damage} damage`;
         }
-        hitLog += "!";
+        hitLog += ".";
 
         // Determine the attack effect, when applicable
         let effect: AttackEffect | undefined;
@@ -144,16 +163,21 @@ export const BattlePanel = ({
     // Don't proceed if the game is over
     if (isGameOver) return;
 
-    // Randomly select a defender from the hero party
-    const defenderIndex = selectRandomCreature(heroParty.heroes);
+    const enemy = enemyParty.enemies[initiativeBearer.index];
 
-    // Attack the active hero
-    attackCreature("Enemy", initiativeBearer.index, "Hero", defenderIndex);
+    if (!enemy.effects?.includes("KO") && !enemy.effects?.includes("Stun")) {
+      // Randomly select a defender from the hero party
+      const defenderIndex = selectRandomCreature(heroParty.heroes);
+
+      // Attack the active hero
+      attackCreature("Enemy", initiativeBearer.index, "Hero", defenderIndex);
+    }
 
     // Proceed to the next initiative bearer
     engine.advanceInitiative();
   }, [
     attackCreature,
+    enemyParty.enemies,
     heroParty.heroes,
     initiativeBearer.index,
     engine,
@@ -202,9 +226,6 @@ export const BattlePanel = ({
 
   /** When the Recover button is clicked */
   const handleRecover = () => {
-    // Attempt to recover the active hero
-    engine.recoverHero(activeHero);
-
     // Proceed to the next initiative bearer
     engine.advanceInitiative();
   };

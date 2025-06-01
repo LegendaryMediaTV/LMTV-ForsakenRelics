@@ -57,11 +57,20 @@ export class GameEngine {
       return;
     }
 
-    // Remove the stun effect if, it exists
+    // Remove the stun effect, if it exists
     if (creature.effects.includes("Stun")) {
       creature.effects = creature.effects.filter((effect) => effect !== "Stun");
 
       this.addLog(`${creature.name} is no longer stunned!`);
+    }
+
+    // Remove the inhibit effect, if it exists
+    if (creature.effects.includes("Inhibit")) {
+      creature.effects = creature.effects.filter(
+        (effect) => effect !== "Inhibit"
+      );
+
+      this.addLog(`${creature.name} is no longer inhibited!`);
     }
 
     // Remove the KO effect if it exists
@@ -313,7 +322,7 @@ export class GameEngine {
     this._notifyHeroPartySubscribers();
 
     this.addLog(
-      `The hero party gained ${amount} XP, for a total of ${this._heroParty.xp} XP!`
+      `The hero party gained ${amount} XP, for a total of ${this._heroParty.xp} XP.`
     );
 
     // Check if any heroes can level up
@@ -435,25 +444,36 @@ export class GameEngine {
 
   /** Advances the initiative order to the next capable creature */
   advanceInitiative = () => {
+    let initiativeBearer: InitiativeBearer;
+    let initiativeCreature: Creature;
+
     // If the initiative order is empty or the game is over, do nothing
     if (!this._initiativeOrder.length || this._isGameOver) return;
 
-    // Advance the initiative index until a capable creature is found
-    let initiativeCreature: Creature;
+    // Recover the current initiative bearer creature
+    if (this._initiativeIndex !== -1) {
+      initiativeBearer = this._initiativeOrder[this._initiativeIndex];
+      if (initiativeBearer.type === "Hero") {
+        this._recoverCreature(this._heroParty.heroes[initiativeBearer.index]);
+      } else {
+        this._recoverCreature(this._enemyParty.enemies[initiativeBearer.index]);
+      }
+    }
+
+    // Advance the initiative index until a living creature is found
     do {
       // Go to the next initiative bearer
       this._initiativeIndex =
         (this._initiativeIndex + 1) % this._initiativeOrder.length;
 
+      // Get the new initiative bearer
+      initiativeBearer = this._initiativeOrder[this._initiativeIndex];
+
       // Get the current initiative bearer creature
       initiativeCreature =
-        this._initiativeOrder[this._initiativeIndex].type === "Hero"
-          ? this._heroParty.heroes[
-              this._initiativeOrder[this._initiativeIndex].index
-            ]
-          : this._enemyParty.enemies[
-              this._initiativeOrder[this._initiativeIndex].index
-            ];
+        initiativeBearer.type === "Hero"
+          ? this._heroParty.heroes[initiativeBearer.index]
+          : this._enemyParty.enemies[initiativeBearer.index];
     } while (!initiativeCreature.stats.hp);
 
     // Notify subscribers
